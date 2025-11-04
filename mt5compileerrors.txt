@@ -1,0 +1,25 @@
+QuantSupraAI.mq5			
+config.mqh			
+Structures.mqh			
+RestClient.mqh			
+RiskManager.mqh			
+TradeEngine.mqh			
+Trade.mqh			
+Object.mqh			
+StdLibErr.mqh			
+OrderInfo.mqh			
+HistoryOrderInfo.mqh			
+PositionInfo.mqh			
+DealInfo.mqh			
+Governors.mqh			
+'CloseAllPositions' - member function already defined	TradeEngine.mqh	222	10
+   see declaration of function 'CTradeEngine::CloseAllPositions'	TradeEngine.mqh	119	10
+'IsInTradingSession' - member function already defined	Governors.mqh	228	10
+   see declaration of function 'CGovernors::IsInTradingSession'	Governors.mqh	166	10
+undeclared identifier	RiskManager.mqh	216	29
+cannot convert enum	QuantSupraAI.mq5	433	41
+wrong parameters count	QuantSupraAI.mq5	433	9
+could be one of 2 function(s)	QuantSupraAI.mq5	433	9
+   built-in: double SymbolInfoDouble(const string,ENUM_SYMBOL_INFO_DOUBLE)	QuantSupraAI.mq5	433	9
+   built-in: bool SymbolInfoDouble(const string,ENUM_SYMBOL_INFO_DOUBLE,double&)	QuantSupraAI.mq5	433	9
+5 errors, 0 warnings		5	0

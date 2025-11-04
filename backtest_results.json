@@ -1,0 +1,94 @@
+{
+  "timestamp": "2025-10-31T15:17:28.484519",
+  "metrics": {
+    "total_return": 565.2193041921114,
+    "total_return_pct": 56.521930419211145,
+    "cagr": 503.9118038278592,
+    "monthly_returns": [
+      6.563210628028972,
+      39.59785553270382,
+      10.36086425847843
+    ],
+    "sharpe_ratio": 2.301142313934015,
+    "sortino_ratio": 4.204977521410004,
+    "calmar_ratio": 23.344599438688878,
+    "max_drawdown": 215.85797826658313,
+    "max_drawdown_pct": 21.58579782665831,
+    "avg_drawdown": 63.756361097038855,
+    "total_trades": 980,
+    "winning_trades": 504,
+    "losing_trades": 476,
+    "win_rate": 51.42857142857142,
+    "profit_factor": 1.4658466974991533,
+    "avg_win": 3.5288401131721066,
+    "avg_loss": -2.548983430350062,
+    "avg_win_loss_ratio": 1.3844107698603112,
+    "largest_win": 9.94334455890991,
+    "largest_loss": -8.014350254783922,
+    "max_consecutive_wins": 38,
+    "max_consecutive_losses": 32,
+    "avg_holding_hours": 54.368367346938776,
+    "avg_mae": 112.87537716859109,
+    "avg_mfe": 123.5276626139145,
+    "mae_mfe_ratio": 0.9137659920060407,
+    "worst_daily_loss": -82.18869125320882,
+    "total_loss": 0,
+    "max_daily_profit": 241.11425185433038,
+    "daily_loss_violations": 3,
+    "total_loss_violations": 0
+  },
+  "trade_count": 980,
+  "by_symbol": {
+    "('pnl', 'sum')": {
+      "EURUSD": -32.78127105851106,
+      "NAS100": 72.62279574696247,
+      "XAUUSD": 525.3777795036608
+    },
+    "('pnl', 'mean')": {
+      "EURUSD": -0.33450276590317407,
+      "NAS100": 0.15289009630939468,
+      "XAUUSD": 1.2908544950949896
+    },
+    "('pnl', 'count')": {
+      "EURUSD": 98,
+      "NAS100": 475,
+      "XAUUSD": 407
+    },
+    "('is_win', 'mean')": {
+      "EURUSD": 0.19387755102040816,
+      "NAS100": 0.5515789473684211,
+      "XAUUSD": 0.547911547911548
+    }
+  },
+  "by_alpha": {
+    "('pnl', 'sum')": {
+      "momentum_v3": 565.2193041921122
+    },
+    "('pnl', 'mean')": {
+      "momentum_v3": 0.5767543920327676
+    },
+    "('pnl', 'count')": {
+      "momentum_v3": 980
+    },
+    "('q_star', 'mean')": {
+      "momentum_v3": 5.187985921586207
+    }
+  },
+  "by_session": {
+    "('pnl', 'sum')": {
+      "ASIAN": 321.07769318937983,
+      "LONDON": 14.055661049188855,
+      "NY": 230.08594995354346
+    },
+    "('pnl', 'mean')": {
+      "ASIAN": 1.16332497532384,
+      "LONDON": 0.03660328398226264,
+      "NY": 0.7190185936048233
+    },
+    "('pnl', 'count')": {
+      "ASIAN": 276,
+      "LONDON": 384,
+      "NY": 320
+    }
+  }
+}

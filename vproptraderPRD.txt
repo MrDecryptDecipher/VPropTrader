@@ -1,0 +1,291 @@
+PRD — Quant Ω Supra AI (Memory-Adaptive Prop System)
+Purpose
+Create a fully automated, self-learning research and execution framework for MT5 accounts that:
+Trades only when confidence is extremely high.
+
+
+Keeps max DD < 1 % and daily losses below 5 %.
+
+
+Produces full audit and analytics dashboards proving rule compliance.
+
+
+1.  Compliance Targets
+
+
+
+
+
+
+
+Prop Rule
+Hard-coded Guardrail
+Daily loss ≤ $50 (5 %)
+Auto-flat @ −$45 PnL; block new trades.
+Total loss ≤ $100 (10 %)
+Disable EA < $900 equity.
+Profit target $100 (10 %)
+Halt entries ≥ $100 PnL.
+≥ 4 trading days
+Scheduler forces ≥ 1 session/day until satisfied.
+No overnight/weekend
+Auto-flat 21 : 45 UTC; Friday off 20 : 00 UTC.
+No red news
+Embargo −30 /+15 min via calendar API.
+Consistency
+Daily PnL cap ≈ +1.8 %.
+
+
+
+2.  High-Level Architecture
+┌──────────────────────────┐
+ │     MT5 Expert Advisor   │  (risk, trade, governors)
+ └────────────┬─────────────┘
+              │
+  REST 1-2 s  │
+              ▼
+ ┌──────────────────────────┐
+ │   Sidecar AI Service     │  (Python FastAPI)
+ │  • Data preprocessing    │
+ │  • Memory + retraining   │
+ │  • ML inference ONNX     │
+ │  • Analytics API         │
+ └────────────┬─────────────┘
+              │
+  WebSocket   │
+              ▼
+ ┌──────────────────────────┐
+ │   Web Dashboard (Next.js)│
+ │  • Live PnL, DD, Sharpe  │
+ │  • Rule flags (green/red)│
+ │  • Alpha heatmaps        │
+ │  • Learning curves       │
+ └──────────────────────────┘
+
+3.  Data & Pre-Processing
+
+Feed
+Sample
+Pre-Process
+Market (MT5)
+ticks / bars
+z-scores, EMA slopes, ATR, volatility bands
+Volume
+tick-vol
+RVOL, CVD, VPIN, VWAP bands
+Macro
+DXY, VIX, UST10Y
+standardized z-scores
+News/Calendar
+REST feed
+tag symbols + embargo windows
+Sentiment
+finBERT-lite
+scalar s ∈ [−1,1]
+Cross-Asset
+correlations
+ρ-matrix update per session
+
+
+All features normalized by rolling mean/std, stored in Redis + SQLite.
+
+4.  Memory & Self-Learning Engine
+4.1  Short-Term Memory
+Retains last N trades (context, features, outcome).
+
+
+Updates rolling statistics (hit rate, avg RR, latency, slippage).
+
+
+Used for online re-weighting of alpha modules.
+
+
+4.2  Long-Term Memory
+Stores compressed feature → outcome pairs in vector DB (FAISS/SQLite).
+
+
+Nightly retrain Random Forest + LSTM with newest 5 k samples.
+
+
+Drift detector (K-S test + autoencoder reconstruction error) triggers retraining if distribution shift > τ.
+
+
+4.3  Adaptive Weights
+w_i^{t+1}=w_i^t+\eta(\text{Sharpe}i-\bar{S})-\lambda\,\rho{i,\text{port}}
+Keeps profitable, uncorrelated alphas dominant.
+
+5.  Strategy and Scanning Layer
+Global Scanner: evaluates 30–40 symbol-alpha combinations/second.
+
+
+Confidence Score Q* (from previous version) calculated for each plan.
+
+
+Priority Queue: choose Top-K (≤ 3) plans satisfying ES₉₅ ≤ $10 and ρ < 0.3.
+
+
+Skip-rate: typically > 90 % of plans → only A/A+ setups trade.
+
+
+
+6.  Machine-Learning Stack
+
+Model
+Role
+Update
+Random Forest V4
+classification of TP vs SL
+nightly
+LSTM 2-Head
+vol & direction forecast
+nightly
+Gradient Boosted Tree
+meta-probability refiner
+weekly
+Autoencoder
+drift detection
+continuous
+Reinforcement Bandit
+chooses alpha per regime
+online
+
+
+All models exported → ONNX; inference < 1 ms.
+
+7.  Risk & Execution Math
+7.1  Fractional Kelly with Entropy Penalty
+f = 0.5\frac{E[R]}{Var[R]}(1-H/H_{max})
+reduces size for noisy alphas.
+7.2  Vol-Target Rescaling
+keep realized σ ≈ 1 % of equity per day.
+7.3  Smart Stops
+SL = 0.8×σ̂; TP₁ = 1.5×SL (70 % off); TP₂ = 2.4×SL trail.
+
+
+Time stop = 45 min; 2 adverse bars → partial exit.
+
+
+7.4  Execution Filters
+spread ≤ 60th pctile;
+
+
+slippage model predicts > threshold → cancel;
+
+
+latency > 400 ms → pause;
+
+
+quote-flicker > limit → skip.
+
+
+
+8.  Automation and Governors
+Hard Governors: enforce prop rules; immutable during session.
+
+
+Soft Governors: cool-down after loss, volatility cap, profit lock.
+
+
+Fail-Safe: one-click kill + auto-flat.
+
+
+Scheduler: run only London 07:00-10:00 UTC, NY 13:30-16:00 UTC.
+
+
+
+9.  Web Dashboard (Analytics Suite)
+Stack: Next.js + FastAPI WebSocket feed + Plotly charts.
+
+Panel
+Metrics
+Overview
+Equity, PnL, drawdown, target progress
+Rule Compliance
+green/red lights for each VProp rule
+Alpha Heatmap
+contribution %, Sharpe, hit rate
+Regime Stats
+Trend vs Revert performance
+Risk Monitor
+VaR, ES95, vol forecast, exposure by symbol
+Memory Learning
+model loss curves, feature importance rank
+Session Report
+daily PnL, violations (0 expected), latency histogram
+
+
+All data pulled via REST /analytics or WebSocket stream.
+10.  Logging & Audit
+Each trade record includes:
+timestamp, symbol, regime, alpha_id, features@decision,
+RF_Pwin, LSTM_sigma, Q*, ES95, risk$, lots, SL, TP,
+exit_reason, pnl, spread_z, rule_flags, latency_ms
+
+Daily digest → JSON + CSV → dashboard + backup to SQLite.
+
+11.  Deployment Process
+Install Python 3.11 + FastAPI sidecar; set free API keys (calendar/news).
+
+
+Attach EA to 2–3 symbols (NAS100, XAUUSD, EURUSD).
+
+
+Start sidecar server → verify REST OK.
+
+
+Enable EA (log-only mode 1 session).
+
+
+Go live on VProp trial; monitor dashboard.
+
+
+Nightly retrain (sidecar cron job) → updated ONNX models auto-loaded.
+
+
+
+12.  KPIs & Expected Performance
+
+Metric
+Target
+Daily Return
++1.2 – 1.8 % (capped)
+Max Intraday DD
+≤ 0.6 %
+Peak DD
+≤ 1.5 %
+Hit Rate
+≈ 65 %
+Sharpe
+≥ 4.0
+Rule Violations
+0
+
+
+13.  Roadmap
+v1.0 – baseline automation + dashboard.
+
+
+v1.1 – memory retrain engine + drift detection.
+
+
+v1.2 – reinforcement bandit alpha selector.
+
+
+v1.3 – multi-account dashboard for funded scaling.
+
+
+
+Summary
+Fully MT5-automated but rule-locked — never breaches VPropTrader limits.
+
+
+Multi-symbol scanner + Q* ranking → only A/A+ setups trade.
+
+
+Self-learning memory and periodic retraining cut losses < 1 %.
+
+
+Real-time web dashboard demonstrates profitability and risk discipline to prop evaluators.
+
+
+

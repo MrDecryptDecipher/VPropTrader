@@ -1,0 +1,153 @@
+{
+  "mcpServers": {
+    "exa": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "exa",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2",
+        "--profile",
+        "federal-gull-A1EGep"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "server-sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@smithery-ai/server-sequential-thinking",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2",
+        "--profile",
+        "federal-gull-A1EGep"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@docfork/mcp",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "chrome-devtools-mcp-2": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@SHAY5555-gif/chrome-devtools-mcp-2",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "context7-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@upstash/context7-mcp",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "mcp-browserbase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@browserbasehq/mcp-browserbase",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2",
+        "--profile",
+        "federal-gull-A1EGep"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "mcp-browserbase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@browserbasehq/mcp-browserbase",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2",
+        "--profile",
+        "federal-gull-A1EGep"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "mcpsemanticscholar": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@hamid-vakilzadeh/mcpsemanticscholar",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2",
+        "--profile",
+        "federal-gull-A1EGep"
+      ]
+    }
+  }
+}
+
+{
+  "mcpServers": {
+    "npm-sentinel-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@smithery/cli@latest",
+        "run",
+        "@Nekzus/npm-sentinel-mcp",
+        "--key",
+        "0ce87743-dd43-4c21-9578-96728550b6f2"
+      ]
+    }
+  }
+}
