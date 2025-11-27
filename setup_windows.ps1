@@ -9,6 +9,13 @@ try {
     $pythonVersion = python --version 2>&1
     if ($pythonVersion -match "Python 3\.") {
         Write-Host "✅ Python found: $pythonVersion" -ForegroundColor Green
+        
+        # Check for bleeding edge versions
+        if ($pythonVersion -match "Python 3\.1[3-9]") {
+            Write-Host "⚠️ WARNING: You are using a very new version of Python ($pythonVersion)." -ForegroundColor Yellow
+            Write-Host "   Some libraries (numpy, pandas) may not have pre-built binaries yet." -ForegroundColor Yellow
+            Write-Host "   If installation hangs, please install Python 3.11 or 3.12." -ForegroundColor Yellow
+        }
     } else {
         Write-Host "❌ Python 3 not found! Please install Python 3.10+ and add to PATH." -ForegroundColor Red
         exit 1
@@ -48,8 +55,8 @@ if (-not (Test-Path "venv")) {
 # Activate venv and install requirements
 Write-Host "Installing Python dependencies..."
 .\venv\Scripts\activate
-pip install --upgrade pip
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+pip install -r requirements.txt --prefer-binary
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "❌ Failed to install Python dependencies." -ForegroundColor Red
