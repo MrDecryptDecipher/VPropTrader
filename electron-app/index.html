@@ -144,7 +144,7 @@
 
             try {
                 // In a real app, use IPC. Here we'll fetch directly to Sidecar API
-                const response = await fetch('http://localhost:8000/config/prop-firm', {
+                const response = await fetch('http://localhost:8001/config/prop-firm', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
