@@ -1,98 +1,131 @@
-# Quant Ω Supra AI - Memory-Adaptive Prop Trading System
+# 🚀 VPropTrader: The Super-Intelligent Autonomous Trading System
 
-A fully automated, self-learning research and execution framework for MT5 prop trading accounts.
+> **"Exponentially Better. Truly Autonomous. Risk-Proof."**
 
-## Architecture
+VPropTrader is not just a trading bot; it is a **next-generation quantitative trading ecosystem** designed to dominate Prop Firm challenges and manage capital with institutional-grade precision. It fuses **Macro-Economic Intelligence**, **Deep Quantitative Analysis**, and **State-of-the-Art Machine Learning** into a single, cohesive decision engine.
 
-- **MT5 Expert Advisor (MQL5)**: Trade execution, risk management, compliance guardrails
-- **Sidecar AI Service (Python/FastAPI)**: ML inference, data processing, model retraining
-- **Web Dashboard (Next.js)**: Real-time monitoring, analytics, compliance visualization
+---
 
-## Features
+## 🧠 The "Super Intelligence" Core
 
-- Trades only on A/A+ setups (>90% rejection rate)
-- Strict VPropTrader compliance (max DD < 1%, daily loss < 5%)
-- Self-learning memory with nightly model retraining
-- Multi-model ML ensemble (Random Forest, LSTM, GBT, Autoencoder, Bandit)
-- Real-time analytics dashboard with compliance monitoring
+VPropTrader operates on a multi-layered cognitive architecture:
 
-## Project Structure
+### 1. 🌍 Macro-Fundamental Intelligence
+*   **Real-Time Regime Detection**: Automatically identifies market states (Goldilocks, Reflation, Stagflation, Recession) using live data from **FRED** and **Yahoo Finance**.
+*   **Yield Curve Analysis**: Monitors the 10Y-2Y spread for recession warnings.
+*   **Inflation & VIX Guard**: Dynamically adjusts risk based on CPI data and Volatility Index levels.
+*   **News Embargo**: Automatically pauses trading during high-impact news events.
+
+### 2. 🔢 Deep Quantitative Strategies
+*   **Fractal Geometry**: Uses **Hurst Exponent** to differentiate between trending and mean-reverting markets.
+*   **Spectral Analysis**: Applies **Fast Fourier Transform (FFT)** to detect dominant market cycles and hidden frequencies.
+*   **Statistical Arbitrage**: Monitors cointegration and correlation for pairs trading opportunities.
+
+### 3. 🤖 Next-Gen Machine Learning
+*   **Temporal Fusion Transformer (TFT)**: A cutting-edge attention-based model for accurate time-series price forecasting.
+*   **Reinforcement Learning (PPO)**: A Proximal Policy Optimization agent that manages active trades, optimizing for PnL while minimizing drawdown.
+
+### 4. 🛡️ Institutional Risk Engine
+*   **Prop Firm Guardian**: Strictly enforces **Max Daily Loss**, **Max Total Drawdown**, and **Trading Hours**.
+*   **Dynamic Position Sizing**: Adjusts lot sizes based on volatility (ATR) and account equity.
+*   **Capital Preservation**: The system's #1 priority is to **NEVER** breach a prop firm rule.
+
+---
+
+## 🖥️ The Cockpit (ElectronJS App)
+
+Manage your empire from a sleek, modern dashboard:
+*   **Configuration**: Easily set Prop Firm credentials and rules.
+*   **Monitoring**: View real-time account status and risk metrics.
+*   **Control**: Start/Stop the autonomous engine with a single click.
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+*   **OS**: Ubuntu 20.04+ (Recommended) or Windows (via WSL2)
+*   **Python**: 3.10+
+*   **Node.js**: 16+ (for Electron App)
+*   **MetaTrader 5**: Installed and configured
+
+### Quick Start
+
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/MrDecryptDecipher/VPropTrader.git
+    cd VPropTrader
+    ```
+
+2.  **Install Dependencies**
+    ```bash
+    # Install Python dependencies
+    cd sidecar
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+
+    # Install Electron App dependencies
+    cd ../electron-app
+    npm install
+    ```
+
+3.  **Configure Environment**
+    Create a `.env` file in `sidecar/` with your keys:
+    ```env
+    FRED_API_KEY=your_fred_api_key
+    ```
+
+4.  **Launch the System**
+    ```bash
+    # Start the Backend & Frontend
+    ./start_system.sh
+    ```
+
+---
+
+## 🧪 Verification & Testing
+
+VPropTrader comes with an **Advanced Verification Suite** covering edge cases and failure modes:
+
+```bash
+# Run the Comprehensive System Test
+pytest sidecar/tests/test_full_system.py
+
+# Run Advanced Scenario Tests (Chaos Engineering)
+pytest sidecar/tests/test_advanced_scenarios.py
+```
+
+**Verified Scenarios:**
+*   ✅ API Outages & Data Failures
+*   ✅ Extreme Market Conditions (Hyperinflation, Crashes)
+*   ✅ Corrupted Data Handling (NaNs, Infs)
+*   ✅ Race Conditions & Concurrency
+
+---
+
+## 📂 Project Structure
 
 ```
-Vproptrader/
-├── sidecar/              # Python FastAPI service
+VPropTrader/
+├── docs/                   # Detailed Documentation & Plans
+├── electron-app/           # User-Facing Cockpit (Frontend)
+├── sidecar/                # The "Brain" (Backend)
 │   ├── app/
-│   │   ├── api/          # REST endpoints
-│   │   ├── core/         # Configuration, logging
-│   │   ├── data/         # Data ingestion & processing
-│   │   ├── ml/           # ML models & training
-│   │   ├── memory/       # Short/long-term memory
-│   │   ├── scanner/      # Strategy scanner & alphas
-│   │   ├── risk/         # Position sizing & risk
-│   │   └── analytics/    # Metrics & logging
-│   ├── models/           # Trained ONNX models
-│   ├── data/             # SQLite, logs
-│   └── requirements.txt
-├── mt5_ea/               # MT5 Expert Advisor (MQL5)
-│   ├── QuantSupraAI.mq5
-│   ├── Include/
-│   │   ├── RiskManager.mqh
-│   │   ├── TradeEngine.mqh
-│   │   ├── Governors.mqh
-│   │   └── RestClient.mqh
-│   └── config.mqh
-├── dashboard/            # Next.js web dashboard
-│   ├── src/
-│   │   ├── app/          # Pages
-│   │   ├── components/   # React components
-│   │   ├── lib/          # API client, utils
-│   │   └── types/        # TypeScript types
-│   └── package.json
-└── docs/                 # Documentation
+│   │   ├── data/           # Data Ingestion (FRED, YF, MT5)
+│   │   ├── features/       # Feature Engineering (Macro, Quant)
+│   │   ├── ml/             # Machine Learning Models (Transformer, RL)
+│   │   ├── risk/           # Risk Management Engine
+│   │   └── scanner/        # Main Decision Loop
+│   └── tests/              # Verification Suites
+└── ...
 ```
 
-## Quick Start
+---
 
-### 1. Sidecar Service
+## 📜 License
 
-```bash
-cd Vproptrader/sidecar
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-cp .env.example .env      # Configure API keys
-python -m app.main
-```
+Proprietary & Confidential. Built for **MrDecryptDecipher**.
 
-### 2. Dashboard
-
-```bash
-cd Vproptrader/dashboard
-npm install
-cp .env.example .env.local
-npm run dev
-```
-
-### 3. MT5 EA
-
-1. Copy `mt5_ea/` to MT5 `MQL5/Experts/` directory
-2. Compile in MetaEditor
-3. Configure Sidecar URL in EA settings
-4. Attach to chart (NAS100, XAUUSD, or EURUSD)
-
-## Configuration
-
-See `.env.example` files in each component for required environment variables.
-
-## Performance Targets
-
-- Daily Return: 1.2-1.8%
-- Max Intraday DD: ≤ 0.6%
-- Peak DD: ≤ 1.5%
-- Hit Rate: ~65%
-- Sharpe Ratio: ≥ 4.0
-- Rule Violations: 0
-
-## License
-
-Proprietary - All Rights Reserved
+---
+*Generated by Antigravity (Google DeepMind)*
