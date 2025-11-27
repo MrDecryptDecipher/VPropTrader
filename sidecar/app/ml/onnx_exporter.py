@@ -1,123 +1,117 @@
-"""ONNX Model Export and Validation"""
-
 import numpy as np
-import onnx
-import onnxruntime as ort
-from pathlib import Path
-from typing import Dict, Optional, Tuple
-from loguru import logger
-import time
+import joblib
+import json
 import pickle
-
-# For sklearn to ONNX
-from skl2onnx import convert_sklearn
-from skl2onnx.common.data_types import FloatTensorType
-
-# For PyTorch to ONNX
-import torch
-
+import time
+from pathlib import Path
+from typing import Dict, Tuple, Optional, List, Any
+from loguru import logger
 from app.core import settings
-from app.ml.random_forest import random_forest
-from app.ml.lstm_model import lstm_model
 
+try:
+    import onnxruntime as ort
+    from skl2onnx import convert_sklearn
+    from skl2onnx.common.data_types import FloatTensorType
+    ONNX_AVAILABLE = True
+except ImportError:
+    logger.warning("ONNX/ONNXRuntime not available. ML inference will run in fallback mode.")
+    ONNX_AVAILABLE = False
+    ort = None
 
 class ONNXExporter:
-    """Handles ONNX export and validation for all models"""
-    
+    """
+    Handles exporting trained models to ONNX format for high-performance inference.
+    """
     def __init__(self):
-        self.onnx_dir = Path(settings.model_path) / "onnx"
+        self.onnx_dir = Path(settings.models_dir) / "onnx"
         self.onnx_dir.mkdir(parents=True, exist_ok=True)
         
-        self.rf_onnx_path = self.onnx_dir / "random_forest_v4.onnx"
-        self.lstm_onnx_path = self.onnx_dir / "lstm_2head.onnx"
+        self.rf_onnx_path = self.onnx_dir / "random_forest.onnx"
+        self.lstm_onnx_path = self.onnx_dir / "lstm_transformer.onnx"
         
-        # ONNX Runtime sessions
         self.rf_session = None
         self.lstm_session = None
         
-        # Model metadata
         self.metadata = {}
+        
+        # Try to load existing sessions
+        if ONNX_AVAILABLE:
+            self.load_sessions()
     
-    def export_random_forest(self, n_features: int = 50) -> bool:
+    def export_random_forest(self, model_path: Path = None, n_features: int = 50) -> bool:
         """
-        Export Random Forest to ONNX format
-        
-        Args:
-            n_features: Number of input features
-        
-        Returns:
-            True if export successful
+        Convert scikit-learn Random Forest to ONNX
         """
+        if not ONNX_AVAILABLE:
+            logger.warning("Cannot export RF: ONNX not available")
+            return False
+
         try:
-            if random_forest.model is None:
-                logger.error("Random Forest model not trained or loaded")
+            if model_path is None:
+                model_path = Path(settings.models_dir) / "random_forest.joblib"
+            
+            if not model_path.exists():
+                logger.warning(f"RF model not found at {model_path}")
                 return False
             
-            logger.info("Exporting Random Forest to ONNX...")
+            # Load sklearn model
+            rf_model = joblib.load(model_path)
             
             # Define input type
             initial_type = [('float_input', FloatTensorType([None, n_features]))]
             
-            # Convert to ONNX
-            onnx_model = convert_sklearn(
-                random_forest.model,
-                initial_types=initial_type,
-                target_opset=12,
-                options={
-                    'zipmap': False,  # Don't use ZipMap for probabilities
-                }
-            )
+            # Convert
+            onnx_model = convert_sklearn(rf_model, initial_types=initial_type)
             
-            # Save ONNX model
-            onnx.save_model(onnx_model, str(self.rf_onnx_path))
-            
-            # Validate
-            if not self._validate_onnx_model(self.rf_onnx_path):
-                logger.error("Random Forest ONNX validation failed")
-                return False
-            
-            # Store metadata
-            self.metadata['random_forest'] = {
-                'n_features': n_features,
-                'n_estimators': random_forest.model.n_estimators,
-                'max_depth': random_forest.model.max_depth,
-                'export_time': time.time(),
-            }
+            # Save
+            with open(self.rf_onnx_path, "wb") as f:
+                f.write(onnx_model.SerializeToString())
             
             logger.info(f"✓ Random Forest exported to {self.rf_onnx_path}")
+            
+            # Update metadata
+            self.metadata['random_forest'] = {
+                'exported_at': time.time(),
+                'n_features': n_features,
+                'path': str(self.rf_onnx_path)
+            }
+            
+            # Reload session
+            self.load_sessions()
             return True
             
         except Exception as e:
-            logger.error(f"Error exporting Random Forest to ONNX: {e}", exc_info=True)
+            logger.error(f"Error exporting RF to ONNX: {e}", exc_info=True)
             return False
-    
-    def export_lstm(self, sequence_length: int = 20, n_features: int = 50) -> bool:
+
+    def export_lstm(self, model_wrapper=None, sequence_length: int = 20, n_features: int = 50) -> bool:
         """
-        Export LSTM to ONNX format
-        
-        Args:
-            sequence_length: Length of input sequences
-            n_features: Number of features per timestep
-        
-        Returns:
-            True if export successful
+        Export PyTorch LSTM/Transformer to ONNX
         """
+        if not ONNX_AVAILABLE:
+            logger.warning("Cannot export LSTM: ONNX not available")
+            return False
+
         try:
-            if lstm_model.model is None:
-                logger.error("LSTM model not trained or loaded")
+            import torch
+            
+            if model_wrapper is None:
+                # Need the actual model instance to export
+                logger.warning("Model wrapper instance required for LSTM export")
                 return False
             
-            logger.info("Exporting LSTM to ONNX...")
+            model = model_wrapper.model
+            if model is None:
+                return False
             
-            # Set model to eval mode
-            lstm_model.model.eval()
+            model.eval()
             
             # Create dummy input
-            dummy_input = torch.randn(1, sequence_length, n_features).to(lstm_model.device)
+            dummy_input = torch.randn(1, sequence_length, n_features)
             
-            # Export to ONNX
+            # Export
             torch.onnx.export(
-                lstm_model.model,
+                model,
                 dummy_input,
                 str(self.lstm_onnx_path),
                 export_params=True,
@@ -132,55 +126,42 @@ class ONNXExporter:
                 }
             )
             
-            # Validate
-            if not self._validate_onnx_model(self.lstm_onnx_path):
-                logger.error("LSTM ONNX validation failed")
-                return False
+            logger.info(f"✓ LSTM/Transformer exported to {self.lstm_onnx_path}")
             
-            # Store metadata
+            # Update metadata
             self.metadata['lstm'] = {
+                'exported_at': time.time(),
                 'sequence_length': sequence_length,
                 'n_features': n_features,
-                'hidden_size': lstm_model.model.lstm.hidden_size,
-                'num_layers': lstm_model.model.lstm.num_layers,
-                'export_time': time.time(),
+                'path': str(self.lstm_onnx_path)
             }
             
-            logger.info(f"✓ LSTM exported to {self.lstm_onnx_path}")
+            # Reload session
+            self.load_sessions()
             return True
             
         except Exception as e:
             logger.error(f"Error exporting LSTM to ONNX: {e}", exc_info=True)
             return False
     
-    def _validate_onnx_model(self, model_path: Path) -> bool:
-        """Validate ONNX model structure"""
-        try:
-            onnx_model = onnx.load(str(model_path))
-            onnx.checker.check_model(onnx_model)
-            logger.debug(f"✓ ONNX model validation passed: {model_path.name}")
-            return True
-        except Exception as e:
-            logger.error(f"ONNX validation error: {e}")
+    def load_sessions(self) -> bool:
+        """Load ONNX inference sessions"""
+        if not ONNX_AVAILABLE:
             return False
-    
-    def load_onnx_models(self) -> bool:
-        """Load ONNX models into ONNX Runtime sessions"""
+
         try:
             success = True
             
-            # Load Random Forest
             if self.rf_onnx_path.exists():
                 self.rf_session = ort.InferenceSession(
                     str(self.rf_onnx_path),
                     providers=['CPUExecutionProvider']
                 )
-                logger.info(f"✓ Random Forest ONNX session loaded")
+                logger.info(f"✓ RF ONNX session loaded")
             else:
-                logger.warning(f"Random Forest ONNX not found: {self.rf_onnx_path}")
+                logger.warning(f"RF ONNX not found: {self.rf_onnx_path}")
                 success = False
             
-            # Load LSTM
             if self.lstm_onnx_path.exists():
                 self.lstm_session = ort.InferenceSession(
                     str(self.lstm_onnx_path),
@@ -200,14 +181,8 @@ class ONNXExporter:
     def predict_rf_onnx(self, X: np.ndarray) -> np.ndarray:
         """
         Run Random Forest inference using ONNX
-        
-        Args:
-            X: Feature matrix (n_samples, n_features)
-        
-        Returns:
-            Probability of TP (P_win) for each sample
         """
-        if self.rf_session is None:
+        if not ONNX_AVAILABLE or self.rf_session is None:
             raise ValueError("Random Forest ONNX session not loaded")
         
         try:
@@ -241,14 +216,8 @@ class ONNXExporter:
     def predict_lstm_onnx(self, sequence: np.ndarray) -> Tuple[float, float]:
         """
         Run LSTM inference using ONNX
-        
-        Args:
-            sequence: Input sequence (sequence_length, n_features) or (1, sequence_length, n_features)
-        
-        Returns:
-            (volatility_forecast, direction_forecast)
         """
-        if self.lstm_session is None:
+        if not ONNX_AVAILABLE or self.lstm_session is None:
             raise ValueError("LSTM ONNX session not loaded")
         
         try:
@@ -276,13 +245,10 @@ class ONNXExporter:
     def benchmark_inference_speed(self, n_iterations: int = 1000) -> Dict[str, float]:
         """
         Benchmark ONNX inference speed
-        
-        Args:
-            n_iterations: Number of inference iterations
-        
-        Returns:
-            Dict with timing statistics
         """
+        if not ONNX_AVAILABLE:
+            return {}
+
         results = {}
         
         # Benchmark Random Forest
@@ -378,14 +344,11 @@ class ONNXExporter:
     def export_all_models(self, n_features: int = 50, sequence_length: int = 20) -> bool:
         """
         Export all models to ONNX
-        
-        Args:
-            n_features: Number of input features
-            sequence_length: LSTM sequence length
-        
-        Returns:
-            True if all exports successful
         """
+        if not ONNX_AVAILABLE:
+            logger.warning("Cannot export models: ONNX not available")
+            return False
+
         logger.info("=== Exporting all models to ONNX ===")
         
         rf_success = self.export_random_forest(n_features=n_features)
