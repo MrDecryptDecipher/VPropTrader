@@ -8,7 +8,7 @@ import time
 from app.ml.random_forest import random_forest
 from app.ml.lstm_model import lstm_model
 from app.ml.onnx_exporter import onnx_exporter
-from app.data.features import feature_engineer
+from app.features.feature_engineer import feature_engineer
 
 
 class MLInference:

@@ -241,7 +241,10 @@ app.add_middleware(
 
 # Include API routes
 from app.api.routes import api_router, ws_router
+
+from app.api.user_config import router as user_config_router
 app.include_router(api_router)
+app.include_router(user_config_router)
 app.include_router(ws_router)
 
 

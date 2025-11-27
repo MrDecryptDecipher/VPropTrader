@@ -61,7 +61,8 @@ async def report_execution(execution: ExecutionReport):
     try:
         from app.memory.short_term_memory import short_term_memory
         from app.analytics.trade_logger import trade_logger
-        from app.api.websocket import broadcast_trade
+        from app.learning.trade_recorder import trade_recorder
+from app.api.websocket import broadcast_trade
         
         logger.info(
             f"Execution report received: {execution.trade_id} | "
@@ -78,6 +79,13 @@ async def report_execution(execution: ExecutionReport):
         
         # Log trade (will be stored in daily file)
         await trade_logger.log_trade(trade_data)
+
+        # 🧠 Self-Learning: Record Trade Outcome
+        try:
+            await trade_recorder.record_trade_outcome(trade_data)
+        except Exception as e:
+            logger.error(f"Failed to record trade for learning: {e}")
+
         
         # Broadcast via WebSocket
         await broadcast_trade(trade_data)
@@ -134,7 +142,8 @@ async def report_close(close: CloseReport):
         from app.scanner.alpha_weighting import alpha_weighting
         from app.scanner.alpha_selector import alpha_bandit
         from app.analytics.trade_logger import trade_logger
-        from app.api.websocket import broadcast_trade
+        from app.learning.trade_recorder import trade_recorder
+from app.api.websocket import broadcast_trade
         
         logger.info(
             f"Close report received: {close.trade_id} | "
@@ -222,6 +231,13 @@ async def report_close(close: CloseReport):
         
         # Log complete trade
         await trade_logger.log_trade(trade_data)
+
+        # 🧠 Self-Learning: Record Trade Outcome
+        try:
+            await trade_recorder.record_trade_outcome(trade_data)
+        except Exception as e:
+            logger.error(f"Failed to record trade for learning: {e}")
+
         
         # Update performance metrics
         # This is handled automatically by the memory systems

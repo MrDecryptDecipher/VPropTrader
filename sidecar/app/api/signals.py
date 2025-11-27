@@ -1,6 +1,7 @@
 """Signals API endpoint - polled by MT5 EA"""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
+from app.memory.episodic_memory import episodic_memory, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime

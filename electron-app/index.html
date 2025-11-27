@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VPropTrader Cockpit</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #00ff88;
+            --danger-color: #ff4444;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        h1, h2 { color: var(--accent-color); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            background-color: #111;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 5px;
+        }
+        button {
+            background-color: var(--accent-color);
+            color: black;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+        }
+        button:hover { opacity: 0.9; }
+        .status { margin-top: 10px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 VPropTrader Cockpit</h1>
+        
+        <div class="card">
+            <h2>🏢 Prop Firm Configuration</h2>
+            <div class="form-group">
+                <label>Prop Firm</label>
+                <select id="firmName">
+                    <option value="FTMO">FTMO</option>
+                    <option value="MFF">MyForexFunds</option>
+                    <option value="TFF">TrueForexFunds</option>
+                    <option value="Custom">Custom</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Login ID</label>
+                <input type="text" id="login" placeholder="12345678">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••">
+            </div>
+            <div class="form-group">
+                <label>Server</label>
+                <input type="text" id="server" placeholder="FTMO-Demo">
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🛡️ Risk Rules</h2>
+            <div class="form-group">
+                <label>Max Daily Loss ($)</label>
+                <input type="number" id="maxDailyLoss" placeholder="5000">
+            </div>
+            <div class="form-group">
+                <label>Max Total Drawdown ($)</label>
+                <input type="number" id="maxTotalLoss" placeholder="10000">
+            </div>
+            <div class="form-group">
+                <label>Profit Target ($)</label>
+                <input type="number" id="profitTarget" placeholder="10000">
+            </div>
+            <div class="form-group">
+                <label>Trading Hours (Start - End)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="time" id="startTime" value="09:00">
+                    <input type="time" id="endTime" value="17:00">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Timezone</label>
+                <select id="timezone">
+                    <option value="UTC">UTC</option>
+                    <option value="US/Eastern">New York (EST)</option>
+                    <option value="Europe/London">London (GMT)</option>
+                </select>
+            </div>
+        </div>
+
+        <button onclick="saveConfig()">💾 Save Configuration</button>
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+        async function saveConfig() {
+            const status = document.getElementById('status');
+            status.textContent = "Saving...";
+            status.style.color = "yellow";
+            
+            const data = {
+                user_id: 1,
+                firm: {
+                    firm_name: document.getElementById('firmName').value,
+                    login: document.getElementById('login').value,
+                    password: document.getElementById('password').value,
+                    server: document.getElementById('server').value
+                },
+                rules: {
+                    max_daily_loss: parseFloat(document.getElementById('maxDailyLoss').value),
+                    max_total_loss: parseFloat(document.getElementById('maxTotalLoss').value),
+                    profit_target: parseFloat(document.getElementById('profitTarget').value),
+                    trading_hours_start: document.getElementById('startTime').value,
+                    trading_hours_end: document.getElementById('endTime').value,
+                    timezone: document.getElementById('timezone').value
+                }
+            };
+
+            try {
+                // In a real app, use IPC. Here we'll fetch directly to Sidecar API
+                const response = await fetch('http://localhost:8000/config/prop-firm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    status.textContent = "✅ Configuration Saved Successfully!";
+                    status.style.color = "#00ff88";
+                } else {
+                    status.textContent = "❌ Error: " + result.detail;
+                    status.style.color = "#ff4444";
+                }
+            } catch (e) {
+                status.textContent = "❌ Connection Error: Is Sidecar running?";
+                status.style.color = "#ff4444";
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+</html>

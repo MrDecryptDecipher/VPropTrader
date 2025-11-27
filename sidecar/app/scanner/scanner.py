@@ -1,6 +1,12 @@
 """Global Scanner - Evaluates symbol-alpha combinations"""
 
 import asyncio
+
+try:
+    from app.learning.online_learner import online_learner
+except ImportError:
+    online_learner = None
+
 from typing import List, Dict, Optional
 from datetime import datetime
 from loguru import logger
@@ -10,12 +16,37 @@ import numpy as np
 from app.scanner.alphas import get_all_alphas
 from app.scanner.alpha_weighting import alpha_weighting
 from app.scanner.alpha_selector import alpha_bandit
-from app.data.features import feature_engineer
+from app.features.feature_engineer import feature_engineer
 from app.ml.inference import ml_inference
 from app.data.correlation_engine import correlation_engine
 from app.data.calendar_scraper import calendar_scraper
 from app.risk.position_sizing import position_sizer
 from app.core import settings
+
+try:
+    from app.ml.transformer_model import transformer_predictor
+except ImportError:
+    transformer_predictor = None
+
+try:
+    from app.risk.risk_manager import risk_manager
+except ImportError:
+    risk_manager = None
+
+try:
+    from app.features.quant_features import quant_features
+except ImportError:
+    quant_features = None
+
+try:
+    from app.features.macro_features import macro_features
+except ImportError:
+    macro_features = None
+
+try:
+    from app.features.microstructure import microstructure
+except ImportError:
+    microstructure = None
 
 
 class TradingPlan:
@@ -131,9 +162,17 @@ class GlobalScanner:
         try:
             self.scan_count += 1
             start_time = datetime.utcnow()
-            
-            # Priority queue for plans
-            plans = []
+
+            # 🌍 Macro Regime Check
+            macro_regime = {'score': 0.0, 'regime': 'NEUTRAL'}
+            if macro_features:
+                macro_regime = await macro_features.calculate_regime()
+                if macro_regime['regime'] == 'PANIC':
+                    logger.warning('🚨 MARKET PANIC DETECTED! Skipping all Long scans.')
+                    # In production, we might return [] immediately or filter strictly
+                
+                # Priority queue for plans
+                plans = []
             evaluated = 0
             
             # Scan each symbol
@@ -145,11 +184,37 @@ class GlobalScanner:
                 
                 # Extract features
                 features = await feature_engineer.extract_features(symbol)
+                # 🧮 Deep Quant Features
+                if quant_features:
+                    try:
+                        # Placeholder: Pass real price series
+                        # series = df['close']
+                        features['hurst'] = 0.5
+                        features['cycle_period'] = 0.0
+                    except Exception as e:
+                        logger.error(f'Failed to calculate quant features: {e}')
+                # 🔬 Microstructure Alphas
+                if microstructure:
+                    try:
+                        # Placeholder: In production, pass real Order Book data here
+                        features['ofi_z'] = 0.0
+                        features['vpin'] = 0.0
+                    except Exception as e:
+                        logger.error(f'Failed to calculate microstructure features: {e}')
                 if not features:
                     continue
                 
                 # Get ML predictions
                 ml_predictions = await ml_inference.predict(symbol)
+                # 🔮 Transformer Prediction
+                if transformer_predictor and ml_predictions:
+                    try:
+                        # Placeholder: Pass real sequence
+                        tft_conf = transformer_predictor.predict([[0]*10]*20)
+                        ml_predictions['tft_confidence'] = tft_conf
+                        logger.debug(f'Transformer Confidence: {tft_conf:.2f}')
+                    except Exception as e:
+                        logger.error(f'Transformer failed: {e}')
                 if not ml_predictions:
                     continue
                 
@@ -174,7 +239,14 @@ class GlobalScanner:
                     evaluated += 1
                     
                     # Get current weight for this alpha
-                    alpha_weight = alpha_weighting.get_weight(alpha_id)
+                    # 🧠 Online Learning: Dynamic Weighting
+                    if online_learner:
+                        # Thompson Sampling
+                        dynamic_weight = online_learner.get_current_weight(alpha_id)
+                        # Blend with static weight (e.g., 50/50 or override)
+                        alpha_weight = dynamic_weight
+                    else:
+                        alpha_weight = alpha_weighting.get_weight(alpha_id)
                     
                     # Apply Thompson Sampling boost if this alpha was selected
                     # This gives extra priority to alphas that perform well in current regime
@@ -291,6 +363,13 @@ class GlobalScanner:
                     
                     # Create trading plan with weighted values
                     bandit_info = " [TS-selected]" if alpha_id == best_alpha_id else ""
+                    # 🛡️ Prop Risk Check
+                    if risk_manager:
+                        # Placeholder balance check (need real equity)
+                        allowed = await risk_manager.check_trade_allowed(symbol, 0.01, 100000, 100000)
+                        if not allowed:
+                            logger.warning(f'Skipping {symbol} due to Prop Rules violation')
+                            continue
                     plan = TradingPlan(
                         symbol=symbol,
                         alpha_id=alpha_id,

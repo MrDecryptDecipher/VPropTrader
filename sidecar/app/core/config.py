@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     twelvedata_api_key: str = Field(default="", env="TWELVEDATA_API_KEY")
     polygon_api_key: str = Field(default="", env="POLYGON_API_KEY")
     
+    # Browserbase
+    browserbase_project_id: str = Field(default="", env="BROWSERBASE_PROJECT_ID")
+    browserbase_api_key: str = Field(default="", env="BROWSERBASE_API_KEY")
+    
+    # OpenRouter
+    openrouter_api_key: str = Field(default="", env="OPENROUTER_API_KEY")
+    
     # Data Pipeline Configuration
     collection_interval: int = Field(default=1, env="COLLECTION_INTERVAL")
     max_bars_cache: int = Field(default=5000, env="MAX_BARS_CACHE")

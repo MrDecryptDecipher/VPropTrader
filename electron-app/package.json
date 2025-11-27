@@ -1,0 +1,15 @@
+{
+  "name": "vproptrader-cockpit",
+  "version": "1.0.0",
+  "description": "VPropTrader Control Center",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "Antigravity AI",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}
