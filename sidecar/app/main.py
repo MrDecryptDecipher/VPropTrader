@@ -72,6 +72,14 @@ async def lifespan(app: FastAPI):
         
         logger.info("✓ Sidecar Service started successfully")
         
+        # Debug: Log all registered routes
+        logger.info("Registered Routes:")
+        for route in app.routes:
+            if hasattr(route, "methods"):
+                logger.info(f"Route: {route.methods} {route.path}")
+            else:
+                logger.info(f"Route: {route.path}")
+        
     except Exception as e:
         logger.error(f"✗ Startup failed: {e}", exc_info=True)
         raise
