@@ -155,7 +155,8 @@
                     status.textContent = "✅ Configuration Saved Successfully!";
                     status.style.color = "#00ff88";
                 } else {
-                    status.textContent = "❌ Error: " + result.detail;
+                    const errorMsg = result.detail || result.message || JSON.stringify(result);
+                    status.textContent = "❌ Error: " + errorMsg;
                     status.style.color = "#ff4444";
                 }
             } catch (e) {

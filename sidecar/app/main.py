@@ -1,180 +1,69 @@
-"""Main FastAPI application entry point"""
+import asyncio
+import signal
+import sys
+import time
+from contextlib import asynccontextmanager
+from datetime import datetime
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
 from loguru import logger
-import signal
-import sys
-from datetime import datetime
 
-from app.core import settings, setup_logging
-
-
-# Initialize logging
-setup_logging()
+from app.core import settings
+from app.data.database import db
+from app.data.redis_client import redis_client
+from app.data.vector_store import vector_store
+from app.data.mt5_client import mt5_client
+from app.data.calendar_scraper import calendar_scraper
+from app.data.fred_client import fred_client
+from app.data.orchestrator import DataOrchestrator
 
 # Global state
 app_state = {
     "startup_time": None,
     "shutdown_requested": False,
+    "orchestrator": None
 }
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle manager for startup and shutdown"""
-    # Startup
-    app_state["startup_time"] = datetime.utcnow()
-    logger.info("=" * 60)
-    logger.info("Starting Quant Ω Supra AI Sidecar Service")
-    logger.info("=" * 60)
-    logger.info(f"Environment: {settings.environment}")
-    logger.info(f"Host: {settings.host}:{settings.port}")
-    logger.info(f"Symbols: {settings.symbols_list}")
-    logger.info(f"Log Level: {settings.log_level}")
-    logger.info(f"Redis: {settings.redis_host}:{settings.redis_port}")
-    logger.info(f"Database: {settings.database_path}")
-    logger.info(f"Model Path: {settings.model_path}")
-    logger.info(f"FRED API: {settings.fred_api_url}")
-    logger.info("=" * 60)
-    
-    # Initialize storage connections
-    from app.data.database import db
-    from app.data.redis_client import redis_client
-    from app.data.vector_store import vector_store
-    from app.data.mt5_client import mt5_client
-    from app.data.fred_client import fred_client
-    from app.data.calendar_scraper import calendar_scraper
-    from app.data.correlation_engine import correlation_engine
-    from app.data.sentiment_analyzer import sentiment_analyzer
-    
+    """Lifecycle manager for startup and shutdown events"""
     try:
-        # Connect to database
+        app_state["startup_time"] = datetime.utcnow()
+        logger.info("=" * 60)
+        logger.info(f"Starting Sidecar Service ({settings.environment})")
+        logger.info("=" * 60)
+        
+        # Initialize Database
         await db.connect()
+        logger.info("✓ Database connected")
         
-        # Connect to Redis
+        # Initialize Redis
         await redis_client.connect()
+        logger.info("✓ Redis connected")
         
-        # Initialize FAISS
-        vector_store.initialize()
+        # Initialize Vector Store
+        vector_store.load_index()
+        logger.info("✓ Vector store loaded")
         
-        # Connect to MT5
+        # Initialize MT5
         if mt5_client.connect():
-            logger.info("✓ MT5 connected successfully")
+            logger.info("✓ MetaTrader 5 connected")
         else:
-            logger.warning("⚠ MT5 connection failed - will retry on demand")
+            logger.warning("⚠ MetaTrader 5 connection failed")
+            
+        # Initialize FRED Client
+        fred_client.api_key = settings.fred_api_key
+        logger.info("✓ FRED client initialized")
         
-        # Test FRED API
-        if settings.fred_api_key:
-            indicators = await fred_client.get_macro_indicators()
-            logger.info(f"✓ FRED API connected - Retrieved {len([v for v in indicators.values() if v is not None])} indicators")
-        else:
-            logger.warning("⚠ FRED API key not configured")
-        
-        # Fetch calendar events
-        events = await calendar_scraper.fetch_events()
-        logger.info(f"✓ Calendar: {len(events)} high-impact events loaded")
-        
-        # Initialize correlations
-        if mt5_client.connected:
-            await correlation_engine.update_correlations()
-        
-        # Load sentiment model (lazy loading)
-        sentiment_analyzer.load_model()
-        
-        # Bootstrap data collection (if needed and MT5 available)
-        bootstrap_enabled = settings.bootstrap_on_startup if hasattr(settings, 'bootstrap_on_startup') else True
-        
-        if bootstrap_enabled and mt5_client.connected:
-            try:
-                from app.data.bootstrap_collector import bootstrap_collector
-                logger.info("Checking bootstrap data collection...")
-                bootstrap_success = await bootstrap_collector.run_bootstrap()
-                
-                if bootstrap_success:
-                    # Get and log data quality metrics
-                    metrics = await bootstrap_collector.get_data_quality_metrics()
-                    logger.info(f"✓ Bootstrap complete: {metrics.get('total_bars', 0)} bars collected")
-                    logger.info(f"  Real data: {metrics.get('real_bars', 0)} bars ({100 - metrics.get('synthetic_percentage', 0):.1f}%)")
-                    logger.info(f"  Synthetic data: {metrics.get('synthetic_bars', 0)} bars ({metrics.get('synthetic_percentage', 0):.1f}%)")
-                else:
-                    logger.warning("⚠ Bootstrap failed - system may have limited functionality")
-            except Exception as e:
-                logger.warning(f"Bootstrap collection skipped: {e}")
-        else:
-            logger.info("✓ Bootstrap collection skipped (MT5 not available or disabled)")
-        
-        # Train ML models if needed (bootstrap)
+        # Start Data Orchestrator
         try:
-            from app.ml.bootstrap_trainer import bootstrap_trainer
-            training_success = await bootstrap_trainer.train_if_needed()
-            
-            if training_success:
-                logger.info("✓ ML models ready")
-                
-                # Get training status
-                status = bootstrap_trainer.get_training_status()
-                logger.info(f"  ONNX models: RF={status['rf_onnx_exists']}, LSTM={status['lstm_onnx_exists']}")
-                logger.info(f"  Native models: RF={status['rf_native_exists']}, LSTM={status['lstm_native_exists']}")
-            else:
-                logger.warning("⚠ ML model training failed - will use rule-based fallback")
-        except Exception as e:
-            logger.warning(f"⚠ ML model training skipped: {e}")
-        
-        # Load ML models
-        try:
-            from app.ml.model_manager import model_manager
-            model_load_success = await model_manager.load_models()
-            if model_load_success:
-                logger.info("✓ ML models loaded successfully")
-            else:
-                logger.warning("⚠ ML models not loaded - will use defaults")
-        except Exception as e:
-            logger.warning(f"⚠ ML models not loaded: {e}")
-        
-        # Start background tasks
-        import asyncio
-        from app.ml.retraining_engine import schedule_nightly_retrain, schedule_drift_checks
-        from app.analytics.trade_logger import schedule_daily_digest
-        
-        # Schedule nightly retraining
-        asyncio.create_task(schedule_nightly_retrain())
-        logger.info("✓ Nightly retraining scheduler started")
-        
-        # Schedule drift checks
-        asyncio.create_task(schedule_drift_checks())
-        logger.info("✓ Drift detection scheduler started")
-        
-        # Schedule daily digest generation
-        asyncio.create_task(schedule_daily_digest())
-        logger.info("✓ Daily digest scheduler started")
-        
-        # Start high-frequency data orchestrator
-        try:
-            from app.data.high_frequency_orchestrator import HighFrequencyDataOrchestrator
-            
-            # Get API keys from settings
-            api_keys = {}
-            if hasattr(settings, 'alphavantage_api_key') and settings.alphavantage_api_key:
-                api_keys['alphavantage'] = settings.alphavantage_api_key
-            if hasattr(settings, 'twelvedata_api_key') and settings.twelvedata_api_key:
-                api_keys['twelvedata'] = settings.twelvedata_api_key
-            if hasattr(settings, 'polygon_api_key') and settings.polygon_api_key:
-                api_keys['polygon'] = settings.polygon_api_key
-            
-            # Initialize orchestrator with generic symbols
-            orchestrator = HighFrequencyDataOrchestrator(
-                symbols=['NAS100', 'XAUUSD', 'EURUSD'],  # Generic symbols
-                collection_interval=1,  # 1-second collection
-                max_retries=3,
-                api_keys=api_keys
-            )
-            
-            # Start orchestrator as background task
-            await orchestrator.start()
+            orchestrator = DataOrchestrator()
             app_state["orchestrator"] = orchestrator
+            
+            # Start background task
+            asyncio.create_task(orchestrator.start())
             logger.info("✓ High-frequency data orchestrator started")
             
         except Exception as e:
@@ -241,8 +130,8 @@ app.add_middleware(
 
 # Include API routes
 from app.api.routes import api_router, ws_router
-
 from app.api.user_config import router as user_config_router
+
 app.include_router(api_router)
 app.include_router(user_config_router)
 app.include_router(ws_router)
@@ -258,6 +147,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={
             "error": "Internal server error",
             "message": str(exc) if settings.environment == "development" else "An error occurred",
+            "detail": str(exc) if settings.environment == "development" else "An error occurred", # Alias for frontend compatibility
             "timestamp": datetime.utcnow().isoformat(),
         },
     )
