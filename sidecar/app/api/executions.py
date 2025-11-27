@@ -62,7 +62,7 @@ async def report_execution(execution: ExecutionReport):
         from app.memory.short_term_memory import short_term_memory
         from app.analytics.trade_logger import trade_logger
         from app.learning.trade_recorder import trade_recorder
-from app.api.websocket import broadcast_trade
+        from app.api.websocket import broadcast_trade
         
         logger.info(
             f"Execution report received: {execution.trade_id} | "
@@ -143,7 +143,7 @@ async def report_close(close: CloseReport):
         from app.scanner.alpha_selector import alpha_bandit
         from app.analytics.trade_logger import trade_logger
         from app.learning.trade_recorder import trade_recorder
-from app.api.websocket import broadcast_trade
+        from app.api.websocket import broadcast_trade
         
         logger.info(
             f"Close report received: {close.trade_id} | "
