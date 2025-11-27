@@ -17,7 +17,7 @@ from app.data.vector_store import vector_store
 from app.data.mt5_client import mt5_client
 from app.data.calendar_scraper import calendar_scraper
 from app.data.fred_client import fred_client
-from app.data.orchestrator import DataOrchestrator
+from app.data.high_frequency_orchestrator import HighFrequencyDataOrchestrator as DataOrchestrator
 
 # Global state
 app_state = {
@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
         
         # Start Data Orchestrator
         try:
-            orchestrator = DataOrchestrator()
+            orchestrator = DataOrchestrator(symbols=settings.symbols_list, collection_interval=settings.collection_interval)
             app_state["orchestrator"] = orchestrator
             
             # Start background task
