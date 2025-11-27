@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     base_path: str = Field(default=".", env="BASE_PATH")
     
     # Server
-    host: str = Field(default="0.0.0.0", env="HOST")
+    host: str = Field(default="127.0.0.1", env="HOST")
     port: int = Field(default=8001, env="PORT")
     environment: str = Field(default="development", env="ENVIRONMENT")
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
