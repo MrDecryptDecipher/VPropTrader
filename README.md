@@ -49,7 +49,25 @@ Manage your empire from a sleek, modern dashboard:
 *   **Node.js**: 16+ (for Electron App)
 *   **MetaTrader 5**: Installed and configured
 
-### Quick Start
+### Quick Start (Windows 11)
+
+1.  **Clone the Repository**
+    ```powershell
+    git clone https://github.com/MrDecryptDecipher/VPropTrader.git
+    cd VPropTrader
+    ```
+
+2.  **Run Automated Setup**
+    ```powershell
+    .\setup_windows.ps1
+    ```
+
+3.  **Launch the System**
+    ```powershell
+    .\start_system.ps1
+    ```
+
+### Quick Start (Linux/Mac)
 
 1.  **Clone the Repository**
     ```bash
