@@ -133,9 +133,9 @@
                     server: document.getElementById('server').value
                 },
                 rules: {
-                    max_daily_loss: parseFloat(document.getElementById('maxDailyLoss').value),
-                    max_total_loss: parseFloat(document.getElementById('maxTotalLoss').value),
-                    profit_target: parseFloat(document.getElementById('profitTarget').value),
+                    max_daily_loss: parseFloat(document.getElementById('maxDailyLoss').value) || 0.0,
+                    max_total_loss: parseFloat(document.getElementById('maxTotalLoss').value) || 0.0,
+                    profit_target: parseFloat(document.getElementById('profitTarget').value) || 0.0,
                     trading_hours_start: document.getElementById('startTime').value,
                     trading_hours_end: document.getElementById('endTime').value,
                     timezone: document.getElementById('timezone').value
