@@ -11,6 +11,22 @@ print("\nsys.path:")
 for p in sys.path:
     print(f"  - {p}")
 
+print("\nChecking file system...")
+app_path = os.path.join(os.getcwd(), "app")
+data_path = os.path.join(app_path, "data")
+print(f"Checking {data_path}...")
+if os.path.exists(data_path):
+    print(f"✅ Directory exists.")
+    try:
+        files = os.listdir(data_path)
+        print("   Contents:")
+        for f in files:
+            print(f"   - {f}")
+    except Exception as e:
+        print(f"   ❌ Could not list directory: {e}")
+else:
+    print(f"❌ Directory does NOT exist!")
+
 print("\nAttempting to import 'app'...")
 try:
     import app
