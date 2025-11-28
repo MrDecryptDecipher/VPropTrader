@@ -37,6 +37,10 @@ async def lifespan(app: FastAPI):
         
         # Initialize Database
         await db.connect()
+    
+    # Initialize User DB
+    from app.data.user_db import user_db
+    await user_db.init_db()
         logger.info("✓ Database connected")
         
         # Initialize Redis
