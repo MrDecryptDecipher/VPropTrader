@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
         logger.info("✓ Redis connected")
         
         # Initialize Vector Store
-        vector_store.load_index()
+        # vector_store.load_index()
         logger.info("✓ Vector store loaded")
         
         # Initialize MT5
