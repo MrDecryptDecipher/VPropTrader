@@ -20,7 +20,7 @@ if (-not (Test-Path $VenvActivate)) {
 }
 
 # Start Uvicorn in a new process
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "& {cd '$SidecarPath'; . '$VenvActivate'; uvicorn app.main:app --reload --host 127.0.0.1 --port 8001}"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "& {cd '$SidecarPath'; . '$VenvActivate'; uvicorn app.main:app --reload --host 127.0.0.1 --port 54321}"
 Write-Host "✅ Backend started in a new window." -ForegroundColor Green
 
 # 2. Start Frontend (Electron)
