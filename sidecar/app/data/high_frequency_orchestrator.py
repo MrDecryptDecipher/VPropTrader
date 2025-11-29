@@ -1,7 +1,7 @@
 """High-frequency data orchestrator"""
 
+import asyncio
 from loguru import logger
-
 
 class HighFrequencyDataOrchestrator:
     """Orchestrates high-frequency data collection"""
@@ -17,9 +17,31 @@ class HighFrequencyDataOrchestrator:
     async def start(self):
         """Start data collection"""
         self.running = True
-        logger.info("High-frequency data collection started (stub implementation)")
+        logger.info("High-frequency data collection started")
+        asyncio.create_task(self._collection_loop())
     
     async def stop(self):
         """Stop data collection"""
         self.running = False
         logger.info("High-frequency data collection stopped")
+
+    async def _collection_loop(self):
+        """Main data collection loop"""
+        from app.data.mt5_client import mt5_client
+        
+        while self.running:
+            try:
+                for symbol in self.symbols:
+                    tick = mt5_client.get_latest_tick(symbol)
+                    if tick:
+                        logger.info(f"Tick {symbol}: {tick['bid']} / {tick['ask']}")
+                    else:
+                        # Try to get symbol info to see if it's valid
+                        info = mt5_client.get_symbol_info(symbol)
+                        if not info:
+                            logger.warning(f"Could not get info for {symbol}")
+                            
+            except Exception as e:
+                logger.error(f"Error in collection loop: {e}")
+                
+            await asyncio.sleep(self.collection_interval)

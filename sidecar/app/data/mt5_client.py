@@ -48,3 +48,81 @@ class MT5Client:
 
 # Global instance
 mt5_client = MT5Client()
+
+    def get_symbol_info(self, symbol: str):
+        """Get symbol information"""
+        if not self.connect():
+            return None
+        
+        info = mt5.symbol_info(symbol)
+        if info is None:
+            logger.warning(f"Symbol {symbol} not found")
+            return None
+            
+        if not info.visible:
+            if not mt5.symbol_select(symbol, True):
+                logger.warning(f"Symbol {symbol} not visible and cannot be selected")
+                return None
+                
+        return info
+
+    def get_latest_tick(self, symbol: str):
+        """Get latest tick data"""
+        if not self.connect():
+            return None
+            
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            logger.warning(f"Tick data not available for {symbol}")
+            return None
+            
+        return {
+            'time': tick.time,
+            'bid': tick.bid,
+            'ask': tick.ask,
+            'last': tick.last,
+            'volume': tick.volume
+        }
+
+    def get_rates(self, symbol: str, timeframe, count: int = 100):
+        """Get historical rates"""
+        if not self.connect():
+            return None
+            
+        rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+        if rates is None:
+            logger.warning(f"Rates not available for {symbol}")
+            return None
+            
+        return rates
+
+    def place_trade(self, symbol: str, action: str, volume: float, sl: float = 0.0, tp: float = 0.0, comment: str = ""):
+        """Place a trade"""
+        if not self.connect():
+            return None
+            
+        order_type = mt5.ORDER_TYPE_BUY if action == 'BUY' else mt5.ORDER_TYPE_SELL
+        price = mt5.symbol_info_tick(symbol).ask if action == 'BUY' else mt5.symbol_info_tick(symbol).bid
+        
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": symbol,
+            "volume": volume,
+            "type": order_type,
+            "price": price,
+            "sl": sl,
+            "tp": tp,
+            "deviation": 20,
+            "magic": 234000,
+            "comment": comment,
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        
+        result = mt5.order_send(request)
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            logger.error(f"Order failed: {result.comment}")
+            return None
+            
+        logger.info(f"Trade placed: {result.order}")
+        return result._asdict()
