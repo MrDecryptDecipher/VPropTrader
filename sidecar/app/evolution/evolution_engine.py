@@ -32,12 +32,28 @@ class EvolutionEngine:
             api_key=settings.openrouter_api_key,
         )
         
-        # Swarm Configuration (Free Tier Models)
+        # Massive Swarm Configuration (12+ Free Models)
+        # We group them by capability, but can fallback to any.
         self.swarm = {
-            "coder": "kwaipilot/kat-coder-pro:free",          # Best for writing code
-            "reasoner": "tngtech/deepseek-r1t2-chimera:free", # Best for optimizing logic
-            "general": "google/gemma-3-27b-it:free",         # Fallback / Crossover
-            "backup": "nvidia/nemotron-nano-9b-v2:free"      # Lightweight backup
+            "coder": [
+                "kwaipilot/kat-coder-pro:free",
+                "qwen/qwen3-coder:free",
+                "google/gemini-2.0-flash-exp:free"
+            ],
+            "reasoner": [
+                "tngtech/deepseek-r1t2-chimera:free",
+                "alibaba/tongyi-deepresearch-30b-a3b:free",
+                "nvidia/nemotron-nano-12b-v2-vl:free" # Good at reasoning too
+            ],
+            "general": [
+                "google/gemma-3-27b-it:free",
+                "meituan/longcat-flash-chat:free",
+                "openai/gpt-oss-20b:free",
+                "z-ai/glm-4.5-air:free",
+                "moonshotai/kimi-k2:free",
+                "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+                "nvidia/nemotron-nano-9b-v2:free"
+            ]
         }
 
     async def initialize_population(self):
@@ -63,7 +79,8 @@ class EvolutionEngine:
             if code:
                 self.population.append(StrategyGenome(code, generation=0))
                 logger.info(f"Created genome {i+1}/{self.population_size}")
-            await asyncio.sleep(2) 
+            # Dynamic sleep: 5s + random jitter
+            await asyncio.sleep(5 + random.random() * 5) 
             
         logger.info(f"Genesis complete. Population size: {len(self.population)}")
 
@@ -115,48 +132,58 @@ class EvolutionEngine:
             if child_code:
                 new_population.append(child)
             
-            await asyncio.sleep(2) 
+            # Dynamic sleep: 5s + random jitter
+            await asyncio.sleep(5 + random.random() * 5) 
                 
         self.population = new_population
 
     async def _generate_code(self, prompt: str, task_type: str = "general") -> str:
-        """Calls LLM to generate code with swarm fallback logic"""
+        """Calls LLM to generate code with massive swarm rotation"""
         
-        # Determine primary model based on task
-        primary_model = self.swarm.get(task_type, self.swarm["general"])
-        # Create a list of models to try (Primary -> General -> Backup)
-        models_to_try = [primary_model]
-        if primary_model != self.swarm["general"]:
-            models_to_try.append(self.swarm["general"])
-        models_to_try.append(self.swarm["backup"])
+        # Get list of models for this task type
+        primary_models = self.swarm.get(task_type, self.swarm["general"])
+        # Get all other models as backup
+        backup_models = []
+        for k, v in self.swarm.items():
+            if k != task_type:
+                backup_models.extend(v)
         
-        base_delay = 5
+        # Shuffle to spread load
+        random.shuffle(primary_models)
+        random.shuffle(backup_models)
+        
+        # Try primary models first, then backups
+        models_to_try = primary_models + backup_models
+        
+        # Limit total attempts to avoid infinite loops, but try enough models
+        models_to_try = models_to_try[:10] 
+        
+        base_delay = 10 # Increased base delay
         
         for model in models_to_try:
-            for attempt in range(2): # Try each model twice
-                try:
-                    # logger.debug(f"Asking {model}...")
-                    response = self.client.chat.completions.create(
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": "You are an expert Quant Developer. Output ONLY Python code."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        temperature=0.7,
-                        max_tokens=1000
-                    )
-                    code = response.choices[0].message.content
-                    return self._clean_code(code)
-                except Exception as e:
-                    error_str = str(e).lower()
-                    if "429" in error_str or "rate limit" in error_str:
-                        delay = base_delay + random.uniform(0, 2)
-                        logger.warning(f"Rate limit on {model}. Switching/Retrying in {delay:.1f}s...")
-                        await asyncio.sleep(delay)
-                    else:
-                        logger.error(f"Error with {model}: {e}")
-                        break # Move to next model on non-rate-limit error
-        
+            try:
+                # logger.debug(f"Asking {model}...")
+                response = self.client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert Quant Developer. Output ONLY Python code."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+                code = response.choices[0].message.content
+                return self._clean_code(code)
+            except Exception as e:
+                error_str = str(e).lower()
+                if "429" in error_str or "rate limit" in error_str:
+                    delay = base_delay + random.uniform(0, 5)
+                    logger.warning(f"Rate limit on {model}. Switching in {delay:.1f}s...")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"Error with {model}: {e}")
+                    # Don't sleep for non-rate-limit errors, just switch
+                    
         logger.error("All swarm models failed.")
         return ""
 
@@ -170,7 +197,6 @@ class EvolutionEngine:
         Task: Optimize this strategy. Add a filter or change parameters to improve Sharpe Ratio.
         Output ONLY the modified code.
         """
-        # Use Reasoner model for mutation logic
         return await self._generate_code(prompt, task_type="reasoner")
 
     async def _crossover(self, genome_a: StrategyGenome, genome_b: StrategyGenome) -> str:
@@ -187,7 +213,6 @@ class EvolutionEngine:
         Task: Create a new strategy that combines the best logic from A and B.
         Output ONLY the merged code.
         """
-        # Use General model for merging
         return await self._generate_code(prompt, task_type="general")
 
     def _clean_code(self, text: str) -> str:
