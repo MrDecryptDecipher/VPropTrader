@@ -1,18 +1,24 @@
-"""MetaTrader 5 client for data collection"""
+"""
+MT5 Client Module
+Handles connection and data retrieval from MetaTrader 5.
+"""
 
+import os
+from loguru import logger
+from app.core.config import settings
+
+# Try to import MetaTrader5, handle failure for non-Windows environments
 try:
     import MetaTrader5 as mt5
     MT5_AVAILABLE = True
 except ImportError:
     MT5_AVAILABLE = False
-    mt5 = None
-
-from loguru import logger
-from app.core import settings
-
+    logger.warning("MetaTrader5 module not found. Install with 'pip install MetaTrader5'")
 
 class MT5Client:
-    """MT5 client for market data"""
+    """
+    Wrapper for MetaTrader 5 API.
+    """
     
     def __init__(self):
         self.connected = False
@@ -32,7 +38,7 @@ class MT5Client:
                 return False
             
             self.connected = True
-            logger.info("MT5 connected")
+            # logger.info("MT5 connected") # Reduce log spam
             return True
         except Exception as e:
             logger.warning(f"MT5 connection failed: {e}")
@@ -44,10 +50,6 @@ class MT5Client:
             mt5.shutdown()
             self.connected = False
             logger.info("MT5 disconnected")
-
-
-# Global instance
-mt5_client = MT5Client()
 
     def get_symbol_info(self, symbol: str):
         """Get symbol information"""
@@ -126,3 +128,23 @@ mt5_client = MT5Client()
             
         logger.info(f"Trade placed: {result.order}")
         return result._asdict()
+    
+    def timeframe_to_mt5(self, tf_str: str):
+        """Convert string timeframe to MT5 constant"""
+        if not MT5_AVAILABLE:
+            return 15 # Default
+            
+        mapping = {
+            "M1": mt5.TIMEFRAME_M1,
+            "M5": mt5.TIMEFRAME_M5,
+            "M15": mt5.TIMEFRAME_M15,
+            "M30": mt5.TIMEFRAME_M30,
+            "H1": mt5.TIMEFRAME_H1,
+            "H4": mt5.TIMEFRAME_H4,
+            "D1": mt5.TIMEFRAME_D1,
+        }
+        return mapping.get(tf_str, mt5.TIMEFRAME_M15)
+
+
+# Global instance
+mt5_client = MT5Client()
