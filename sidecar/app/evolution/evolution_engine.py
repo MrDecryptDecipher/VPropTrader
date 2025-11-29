@@ -31,8 +31,8 @@ class EvolutionEngine:
             base_url="https://openrouter.ai/api/v1",
             api_key=settings.openrouter_api_key,
         )
-        # Using a strong coding model available on OpenRouter
-        self.model = "qwen/qwen-2.5-coder-32b-instruct:free" 
+        # Using Gemini 2.0 Flash (Free & Powerful)
+        self.model = "google/gemini-2.0-flash-exp:free" 
 
     async def initialize_population(self):
         """Generates the initial pool of random strategies"""
@@ -61,6 +61,10 @@ class EvolutionEngine:
 
     async def run_generation(self, data: pd.DataFrame):
         """Runs one generation of evolution"""
+        if not self.population:
+            logger.error("Population is empty! Cannot run generation.")
+            return
+
         current_gen = self.population[0].generation if self.population else 0
         logger.info(f"⚔️ Starting Generation {current_gen} Tournament")
         
