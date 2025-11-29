@@ -90,10 +90,16 @@ class MT5Client:
         """Get historical rates"""
         if not self.connect():
             return None
-            
+        
+        # Ensure symbol is selected
+        if not mt5.symbol_select(symbol, True):
+            logger.warning(f"Could not select symbol {symbol}")
+            return None
+
         rates = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
         if rates is None:
-            logger.warning(f"Rates not available for {symbol}")
+            error = mt5.last_error()
+            logger.warning(f"Rates not available for {symbol}. Error: {error}")
             return None
             
         return rates

@@ -106,10 +106,28 @@ if __name__ == "__main__":
     if not settings.openrouter_api_key:
         print("❌ OPENROUTER_API_KEY not set in .env or config!")
     else:
-        # Try to analyze a symbol (assuming MT5 is running)
-        # We need to make sure MT5 is connected for this test to work fully
-        if mt5_client.connect():
-            result = agent.analyze("EURUSD")
-            print(f"Result: {json.dumps(result, indent=2)}")
-        else:
-            print("❌ MT5 not connected. Cannot fetch real data for test.")
+        # Try a list of symbols to find one that works
+        test_symbols = ["EURUSD", "GBPUSD", "BTCUSD", "XAUUSD", "USTEC", "NAS100"]
+        success = False
+        
+        for symbol in test_symbols:
+            print(f"Trying {symbol}...")
+            # We need to make sure MT5 is connected for this test to work fully
+            if mt5_client.connect():
+                result = agent.analyze(symbol)
+                if "error" not in result:
+                    print(f"✅ Success with {symbol}!")
+                    print(f"Result: {json.dumps(result, indent=2)}")
+                    success = True
+                    break
+                else:
+                    print(f"❌ Failed with {symbol}: {result['error']}")
+            else:
+                print("❌ MT5 not connected. Cannot fetch real data for test.")
+                break
+        
+        if not success:
+            print("\n⚠️ All symbols failed. Please check:")
+            print("1. MT5 is running and logged in.")
+            print("2. 'Algo Trading' is enabled.")
+            print("3. At least one of these symbols is in your Market Watch.")
