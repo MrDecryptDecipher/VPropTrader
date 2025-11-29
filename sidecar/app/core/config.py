@@ -1,6 +1,6 @@
 """Configuration management using Pydantic settings"""
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from typing import List
 
@@ -103,7 +103,14 @@ class Settings(BaseSettings):
             return f"redis://:{self.redis_password}@{self.redis_host}:{self.redis_port}/{self.redis_db}"
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
     
-    class Config:
+    model_config = SettingsConfigDict(
+        env_file=(".env", "../..env"),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore"
+    )
+
+    # class Config:
         env_file = ".env"
         case_sensitive = False
 
