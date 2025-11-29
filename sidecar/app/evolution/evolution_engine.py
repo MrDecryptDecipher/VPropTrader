@@ -50,13 +50,14 @@ class EvolutionEngine:
         4. Output ONLY the code block.
         """
         
-        tasks = []
-        for _ in range(self.population_size):
-            tasks.append(self._generate_code(prompt))
+        # Run sequentially to avoid rate limits on free tier
+        for i in range(self.population_size):
+            code = await self._generate_code(prompt)
+            if code:
+                self.population.append(StrategyGenome(code, generation=0))
+                logger.info(f"Created genome {i+1}/{self.population_size}")
+            await asyncio.sleep(2) # Polite delay
             
-        codes = await asyncio.gather(*tasks)
-        
-        self.population = [StrategyGenome(code, generation=0) for code in codes if code]
         logger.info(f"Genesis complete. Population size: {len(self.population)}")
 
     async def run_generation(self, data: pd.DataFrame):
@@ -105,26 +106,39 @@ class EvolutionEngine:
                 
             if child_code:
                 new_population.append(child)
+            
+            await asyncio.sleep(2) # Polite delay between mutations
                 
         self.population = new_population
 
     async def _generate_code(self, prompt: str) -> str:
-        """Calls LLM to generate code"""
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert Quant Developer. Output ONLY Python code."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=1000
-            )
-            code = response.choices[0].message.content
-            return self._clean_code(code)
-        except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
-            return ""
+        """Calls LLM to generate code with retry logic"""
+        max_retries = 5
+        base_delay = 5
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": "You are an expert Quant Developer. Output ONLY Python code."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+                code = response.choices[0].message.content
+                return self._clean_code(code)
+            except Exception as e:
+                error_str = str(e).lower()
+                if "429" in error_str or "rate limit" in error_str:
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    logger.warning(f"Rate limit hit. Retrying in {delay:.1f}s...")
+                    await asyncio.sleep(delay)
+                else:
+                    logger.error(f"LLM generation failed: {e}")
+                    return ""
+        return ""
 
     async def _mutate(self, genome: StrategyGenome) -> str:
         """Asks LLM to improve a strategy"""
@@ -155,9 +169,13 @@ class EvolutionEngine:
         return await self._generate_code(prompt)
 
     def _clean_code(self, text: str) -> str:
-        """Extracts code from markdown blocks"""
+        """Extracts code from markdown blocks and dedents it"""
+        import textwrap
+        
         if "```python" in text:
             text = text.split("```python")[1].split("```")[0]
         elif "```" in text:
             text = text.split("```")[1].split("```")[0]
-        return text.strip()
+            
+        # Normalize indentation
+        return textwrap.dedent(text).strip()

@@ -118,5 +118,9 @@ df = strategy_logic(df)
 
     def _indent_code(self, code: str) -> str:
         """Indents the user code to fit inside the wrapper function"""
-        lines = code.split('\n')
+        import textwrap
+        # First remove any common leading whitespace
+        dedented_code = textwrap.dedent(code)
+        # Then add 4 spaces indentation
+        lines = dedented_code.split('\n')
         return '\n'.join(['    ' + line for line in lines])
