@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     drift_threshold: float = Field(default=0.01, env="DRIFT_THRESHOLD")
     
     # Trading Configuration
-    symbols: str = Field(default="NAS100,XAUUSD,EURUSD", env="SYMBOLS")
+    symbols: str = Field(default="EURUSD.e,GBPUSD.e,USDJPY.e", env="SYMBOLS")
     short_term_memory_size: int = Field(default=1000, env="SHORT_TERM_MEMORY_SIZE")
     long_term_memory_days: int = Field(default=365, env="LONG_TERM_MEMORY_DAYS")
     

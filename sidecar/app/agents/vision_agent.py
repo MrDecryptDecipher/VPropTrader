@@ -107,7 +107,7 @@ if __name__ == "__main__":
         print("❌ OPENROUTER_API_KEY not set in .env or config!")
     else:
         # Try a list of symbols to find one that works
-        test_symbols = ["EURUSD", "GBPUSD", "BTCUSD", "XAUUSD", "USTEC", "NAS100"]
+        test_symbols = ["EURUSD.e", "GBPUSD.e", "USDJPY.e", "XAUUSD.e", "BTCUSD.e", "EURUSD", "GBPUSD"]
         success = False
         
         for symbol in test_symbols:
