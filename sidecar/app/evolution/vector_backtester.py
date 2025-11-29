@@ -29,11 +29,14 @@ class VectorBacktester:
             df = data.copy()
             
             # Define execution context
-            local_context = {
-                "df": df,
+            # Pass imports in globals so they are available to functions defined in the code
+            exec_globals = {
                 "pd": pd,
                 "np": np,
-                "signal": None # Output variable
+            }
+            
+            exec_locals = {
+                "df": df
             }
             
             # Wrap code to ensure it produces a 'signal' column
@@ -54,8 +57,8 @@ df = strategy_logic(df)
 """
             
             # Execute safely
-            exec(wrapped_code, {}, local_context)
-            df = local_context['df']
+            exec(wrapped_code, exec_globals, exec_locals)
+            df = exec_locals['df']
             
             if 'signal' not in df.columns:
                 logger.warning(f"Strategy {genome.id} did not produce a 'signal' column.")
