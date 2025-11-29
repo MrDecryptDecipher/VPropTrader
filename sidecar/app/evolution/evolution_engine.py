@@ -32,27 +32,24 @@ class EvolutionEngine:
             api_key=settings.openrouter_api_key,
         )
         
-        # Massive Swarm Configuration (12+ Free Models)
-        # We group them by capability, but can fallback to any.
+        # Tri-Core Swarm Configuration
         self.swarm = {
-            "coder": [
-                "kwaipilot/kat-coder-pro:free",
-                "qwen/qwen3-coder:free",
-                "google/gemini-2.0-flash-exp:free"
-            ],
-            "reasoner": [
-                "tngtech/deepseek-r1t2-chimera:free",
-                "alibaba/tongyi-deepresearch-30b-a3b:free",
-                "nvidia/nemotron-nano-12b-v2-vl:free" # Good at reasoning too
-            ],
-            "general": [
+            # The Builder: Specialized in writing code
+            "coder": "kwaipilot/kat-coder-pro:free",
+            
+            # The Architect: Specialized in reasoning and optimization
+            "reasoner": "tngtech/deepseek-r1t2-chimera:free",
+            
+            # The Integrator: Specialized in synthesis and general tasks
+            "synthesizer": "google/gemini-2.0-flash-exp:free",
+            
+            # Fallback Pool (Massive Swarm)
+            "fallback": [
                 "google/gemma-3-27b-it:free",
+                "nvidia/nemotron-nano-12b-v2-vl:free",
+                "qwen/qwen3-coder:free",
                 "meituan/longcat-flash-chat:free",
-                "openai/gpt-oss-20b:free",
-                "z-ai/glm-4.5-air:free",
-                "moonshotai/kimi-k2:free",
-                "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-                "nvidia/nemotron-nano-9b-v2:free"
+                "openai/gpt-oss-20b:free"
             ]
         }
 
@@ -137,28 +134,27 @@ class EvolutionEngine:
                 
         self.population = new_population
 
-    async def _generate_code(self, prompt: str, task_type: str = "general") -> str:
-        """Calls LLM to generate code with massive swarm rotation"""
+    async def _generate_code(self, prompt: str, task_type: str = "synthesizer") -> str:
+        """Calls LLM to generate code with Tri-Core routing"""
         
-        # Get list of models for this task type
-        primary_models = self.swarm.get(task_type, self.swarm["general"])
-        # Get all other models as backup
-        backup_models = []
-        for k, v in self.swarm.items():
-            if k != task_type:
-                backup_models.extend(v)
+        # Determine primary model based on task
+        primary_model = self.swarm.get(task_type, self.swarm["synthesizer"])
         
-        # Shuffle to spread load
-        random.shuffle(primary_models)
-        random.shuffle(backup_models)
+        # Create a list of models to try (Primary -> Fallbacks)
+        models_to_try = [primary_model] + self.swarm["fallback"]
         
-        # Try primary models first, then backups
-        models_to_try = primary_models + backup_models
+        # Limit total attempts
+        models_to_try = models_to_try[:5] 
         
-        # Limit total attempts to avoid infinite loops, but try enough models
-        models_to_try = models_to_try[:10] 
+        base_delay = 10 
         
-        base_delay = 10 # Increased base delay
+        # Routing preferences to prioritize throughput (as per research)
+        routing_config = {
+            "provider": {
+                "allow_fallbacks": True,
+                "sort": "throughput" 
+            }
+        }
         
         for model in models_to_try:
             try:
@@ -170,7 +166,8 @@ class EvolutionEngine:
                         {"role": "user", "content": prompt}
                     ],
                     temperature=0.7,
-                    max_tokens=1000
+                    max_tokens=2000, # Increased for reasoning models
+                    extra_body=routing_config # Advanced routing
                 )
                 code = response.choices[0].message.content
                 return self._clean_code(code)
@@ -182,7 +179,6 @@ class EvolutionEngine:
                     await asyncio.sleep(delay)
                 else:
                     logger.error(f"Error with {model}: {e}")
-                    # Don't sleep for non-rate-limit errors, just switch
                     
         logger.error("All swarm models failed.")
         return ""
@@ -197,6 +193,7 @@ class EvolutionEngine:
         Task: Optimize this strategy. Add a filter or change parameters to improve Sharpe Ratio.
         Output ONLY the modified code.
         """
+        # Use Reasoner (Chimera) for optimization
         return await self._generate_code(prompt, task_type="reasoner")
 
     async def _crossover(self, genome_a: StrategyGenome, genome_b: StrategyGenome) -> str:
@@ -213,7 +210,8 @@ class EvolutionEngine:
         Task: Create a new strategy that combines the best logic from A and B.
         Output ONLY the merged code.
         """
-        return await self._generate_code(prompt, task_type="general")
+        # Use Synthesizer (Gemini) for merging
+        return await self._generate_code(prompt, task_type="synthesizer")
 
     def _clean_code(self, text: str) -> str:
         """Extracts code from markdown blocks and dedents it"""
