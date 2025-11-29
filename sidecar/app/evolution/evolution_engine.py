@@ -75,12 +75,13 @@ class EvolutionEngine:
         self.population.sort(key=lambda x: x.fitness, reverse=True)
         
         # Log best performer
-        best = self.population[0]
-        logger.info(f"🏆 Gen {current_gen} Best: Sharpe={best.sharpe_ratio:.2f}, DD={best.max_drawdown:.2%}")
-        self.generations_history.append(best)
+        if self.population:
+            best = self.population[0]
+            logger.info(f"🏆 Gen {current_gen} Best: Sharpe={best.sharpe_ratio:.2f}, DD={best.max_drawdown:.2%}")
+            self.generations_history.append(best)
         
         # 3. Selection (Top 30%)
-        survivors_count = int(self.population_size * 0.3)
+        survivors_count = max(1, int(self.population_size * 0.3))
         survivors = self.population[:survivors_count]
         
         # 4. Reproduction (Fill the rest)
@@ -125,7 +126,9 @@ class EvolutionEngine:
         """Asks LLM to improve a strategy"""
         prompt = f"""
         Here is a trading strategy:
-        
+        ```python
+        {genome.code}
+        ```
         Task: Optimize this strategy. Add a filter or change parameters to improve Sharpe Ratio.
         Output ONLY the modified code.
         """
@@ -135,9 +138,13 @@ class EvolutionEngine:
         """Asks LLM to combine two strategies"""
         prompt = f"""
         Strategy A:
-        
+        ```python
+        {genome_a.code}
+        ```
         Strategy B:
-        
+        ```python
+        {genome_b.code}
+        ```
         Task: Create a new strategy that combines the best logic from A and B.
         Output ONLY the merged code.
         """
@@ -145,6 +152,8 @@ class EvolutionEngine:
 
     def _clean_code(self, text: str) -> str:
         """Extracts code from markdown blocks"""
-        if "python")[1].split("" in text:
-            text = text.split("")[0]
+        if "```python" in text:
+            text = text.split("```python")[1].split("```")[0]
+        elif "```" in text:
+            text = text.split("```")[1].split("```")[0]
         return text.strip()
